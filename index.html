@@ -2,186 +2,291 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1220" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ColtienKK Trip Cost Estimator – ORS</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body{margin:0;padding:24px;font-family:system-ui; background:#0b1220;color:#e2e8f0}
+    :root { --bg:#0b1220; --card:#121a2b; --muted:#94a3b8; --text:#e2e8f0; --accent:#60a5fa; --ok:#34d399; --warn:#f59e0b; --err:#ef4444; --radius:16px; }
+    body{margin:0;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial; background:#0b1220; color:var(--text)}
     .wrap{max-width:980px;margin:0 auto}
-    .card{background:#121a2b;border-radius:16px;padding:18px;margin-bottom:16px}
-    label{font-size:.9rem;color:#94a3b8;display:block;margin-bottom:6px}
-    input,select,button{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2a44;background:#0f172a;color:#e2e8f0}
+    h1{margin:0 0 12px}
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    label{font-size:.9rem;color:var(--muted);display:block;margin-bottom:6px}
+    input,select,button{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2a44;background:#0f172a;color:var(--text)}
     button{cursor:pointer;font-weight:600;background:linear-gradient(135deg,#3b82f6,#22d3ee);color:#081225;border:none}
-    button.secondary{background:#0f172a;color:#e2e8f0;border:1px solid #1f2a44}
+    button.secondary{background:#0f172a;color:var(--text);border:1px solid #1f2a44}
     .grid{display:grid;gap:14px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .pill{padding:8px 12px;border-radius:999px;background:#0f172a;border:1px solid #1f2a44;color:#94a3b8;font-size:.9rem}
+    @media(min-width:760px){.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(4,1fr)}}
+    .row{display:flex;gap:10px;align-items:center}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#0f172a;border:1px solid #1f2a44;color:var(--muted);font-size:.9rem}
     .breakdown{display:grid;gap:8px}
-    .line{display:flex;justify-content:space-between;color:#94a3b8}
+    .breakdown .line{display:flex;justify-content:space-between;color:var(--muted)}
     .total{font-size:1.2rem;font-weight:800}
+    .err{color:var(--err);font-weight:700}
+    code.small{font-size:.8rem;color:#93c5fd}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>ColtienKK – Trip Cost Estimator</h1>
-  <div class="card">
-    <label>ORS API Key</label>
-    <input id="orsKey" placeholder="Paste your ORS key" />
-  </div>
-  <div class="card">
-    <h3>Addresses</h3>
-    <div class="grid">
-      <label>Office</label><input id="office" value="2617 Evergreen Drive, Burlington, IA 52601" />
-      <label>Pickup</label><input id="pickup" />
-      <label>Drop-off</label><input id="drop" />
-    </div>
-  </div>
-  <div class="card grid">
-    <label>MPG</label><input id="mpg" value="18" />
-    <label>Fuel Price</label><input id="fuel" value="3.50" />
-    <label>Base Fee</label><input id="base" value="10" />
-    <label>Per Mile</label><input id="mile" value="0.75" />
-    <label>Driver %</label><input id="driver" value="40" />
-  </div>
-  <div class="row">
-    <button id="estimateBtn">Estimate Cost</button>
-    <button id="pdfBtn" class="secondary">Share Quote (PDF)</button>
-  </div>
-  <div class="card" id="result" hidden>
-    <div class="row">
-      <span class="pill" id="dist">Distance: —</span>
-      <span class="pill" id="time">Time: —</span>
-    </div>
-    <div class="breakdown">
-      <div class="line"><span>Miles</span><strong id="milesOut">—</strong></div>
-      <div class="line"><span>Fuel</span><strong id="fuelOut">—</strong></div>
-      <div class="line"><span>Base</span><strong id="baseOut">—</strong></div>
-      <div class="line"><span>Per-Mile</span><strong id="mileOut">—</strong></div>
-      <div class="line"><span>Subtotal</span><strong id="subOut">—</strong></div>
-      <div class="line"><span>Driver</span><strong id="driverOut">—</strong></div>
-      <div class="line total"><span>Total</span><strong id="totalOut">—</strong></div>
-    </div>
-  </div>
-</div>
-<script>
-  const { jsPDF } = window.jspdf;
-  document.getElementById('estimateBtn').addEventListener('click', ()=>{
-    document.getElementById('result').hidden = false;
-    document.getElementById('dist').textContent = 'Distance: 12.5 mi';
-    document.getElementById('time').textContent = 'Time: 25m';
-    document.getElementById('milesOut').textContent = '12.5 mi';
-    document.getElementById('fuelOut').textContent = '$2.43';
-    document.getElementById('baseOut').textContent = '$10.00';
-    document.getElementById('mileOut').textContent = '$9.38';
-    document.getElementById('subOut').textContent = '$21.81';
-    document.getElementById('driverOut').textContent = '$8.72';
-    document.getElementById('totalOut').textContent = '$21.81';
-  });
-  document.getElementById('pdfBtn').addEventListener('click', ()=>{
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('ColtienKK Trip Quote', 20, 20);
-    doc.setFontSize(12);
-    doc.text('Office: ' + document.getElementById('office').value, 20, 35);
-    doc.text('Pickup: ' + document.getElementById('pickup').value, 20, 45);
-    doc.text('Drop-off: ' + document.getElementById('drop').value, 20, 55);
-    doc.text('Distance: ' + document.getElementById('milesOut').textContent, 20, 70);
-    doc.text('Fuel: ' + document.getElementById('fuelOut').textContent, 20, 80);
-    doc.text('Base Fee: ' + document.getElementById('baseOut').textContent, 20, 90);
-    doc.text('Per-Mile: ' + document.getElementById('mileOut').textContent, 20, 100);
-    doc.text('Subtotal: ' + document.getElementById('subOut').textContent, 20, 110);
-    doc.text('Driver: ' + document.getElementById('driverOut').textContent, 20, 120);
-    doc.text('Total: ' + document.getElementById('totalOut').textContent, 20, 135);
-    doc.save('Trip_Quote.pdf');
-  });
-    // ======= Share Quote (PDF via print) =======
-    function todayISO(){ const d=new Date(); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'2-digit'}); }
+  <div class="wrap">
+    <h1>ColtienKK – Trip Cost Estimator (OpenRouteService)</h1>
 
-    async function shareQuote(){
-      if (els.result.hasAttribute('hidden')){
-        await estimate();
-        if (els.result.hasAttribute('hidden')) return; // stop if still failing
-      }
-      const quote = {
-        date: todayISO(),
-        office: buildAddress(els.officeStreet.value, els.officeCity.value, els.officeState.value, els.officeZip.value),
-        pickup: buildAddress(els.pickupStreet.value, els.pickupCity.value, els.pickupState.value, els.pickupZip.value),
-        drop: buildAddress(els.dropStreet.value, els.dropCity.value, els.dropState.value, els.dropZip.value),
-        includeReturn: els.includeReturn.value==='yes',
-        miles: els.milesOut.textContent,
-        driveTime: els.timePill.textContent.replace('Drive Time: ','')
-      };
-      const costs = {
-        base: els.baseOut.textContent,
-        perMile: els.perMileOut.textContent,
-        fuel: els.fuelOut.textContent,
-        driver: els.driverOut.textContent,
-        total: els.totalOut.textContent
-      };
-      const win = window.open('', '_blank');
-      const html = `<!DOCTYPE html><html><head>
-        <meta charset="utf-8"><title>Trip Quote</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <style>
-          :root{ --ink:#0b1220; --muted:#475569; }
-          body{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color: var(--ink); margin: 28px; }
-          h1{ margin:0 0 4px; font-size: 20px; }
-          .sub{ color: var(--muted); margin:0 0 16px; font-size: 12px }
-          .box{ border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin:12px 0 }
-          .line{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #e2e8f0 }
-          .line:last-child{ border-bottom:none }
-          .total{ font-weight:800; font-size:18px }
-          .pill{ display:inline-block; border:1px solid #e2e8f0; border-radius:999px; padding:6px 10px; font-size:12px; color:#334155; margin-right:8px }
-          @media print{ body{ margin:12mm } .noprint{ display:none } }
-        </style>
-      </head><body>
-        <h1>Trip Quote</h1>
-        <div class="sub">Generated ${quote.date}</div>
-        <div class="box">
-          <div><strong>Route</strong></div>
-          <div>${quote.office} → ${quote.pickup} → ${quote.drop}${quote.includeReturn?' → '+quote.office:''}</div>
-          <div style="margin-top:8px">
-            <span class="pill">Distance: ${quote.miles}</span>
-            <span class="pill">Time: ${quote.driveTime}</span>
-          </div>
-        </div>
-        <div class="box">
-          <div><strong>Cost Breakdown</strong></div>
-          <div class="line"><span>Base Fee</span><strong>${costs.base}</strong></div>
-          <div class="line"><span>Per‑Mile Charge</span><strong>${costs.perMile}</strong></div>
-          <div class="line"><span>Fuel</span><strong>${costs.fuel}</strong></div>
-          <div class="line"><span>Driver Pay</span><strong>${costs.driver}</strong></div>
-          <div class="line total"><span>Total</span><strong>${costs.total}</strong></div>
-        </div>
-        <div style="color:#475569; font-size:12px; margin-top:12px">
-          Quote is an estimate based on current inputs and routing. Final charges may vary due to traffic, detours, or waiting time.
-        </div>
-        <div class="noprint" style="margin-top:16px"><button onclick="window.print()" style="padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;background:white;cursor:pointer">Print / Save as PDF</button></div>
-        <script>window.addEventListener('load',()=>{ setTimeout(()=>{ window.print(); }, 400); });</script>
-      </body></html>`;
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
+    <div class="card grid grid-3">
+      <div>
+        <label>ORS API Key</label>
+        <input id="orsKey" placeholder="Paste your ORS key" />
+      </div>
+      <div>
+        <label>Units</label>
+        <select id="units">
+          <option value="imperial" selected>Miles</option>
+          <option value="metric">Kilometers</option>
+        </select>
+      </div>
+      <div>
+        <label>Include return to office?</label>
+        <select id="includeReturn">
+          <option value="no" selected>No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Office Address</h3>
+      <div class="grid grid-4">
+        <div><label>Street</label><input id="officeStreet" placeholder="2617 Evergreen Drive"/></div>
+        <div><label>City</label><input id="officeCity" placeholder="Burlington"/></div>
+        <div><label>State</label><input id="officeState" placeholder="IA"/></div>
+        <div><label>Zip</label><input id="officeZip" placeholder="52601"/></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pickup Address</h3>
+      <div class="grid grid-4">
+        <div><label>Street</label><input id="pickupStreet"/></div>
+        <div><label>City</label><input id="pickupCity"/></div>
+        <div><label>State</label><input id="pickupState"/></div>
+        <div><label>Zip</label><input id="pickupZip"/></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Drop-off Address</h3>
+      <div class="grid grid-4">
+        <div><label>Street</label><input id="dropStreet"/></div>
+        <div><label>City</label><input id="dropCity"/></div>
+        <div><label>State</label><input id="dropState"/></div>
+        <div><label>Zip</label><input id="dropZip"/></div>
+      </div>
+    </div>
+
+    <div class="card grid grid-3">
+      <div><label>MPG</label><input id="mpg" type="number" step="0.1" min="1" value="18"/></div>
+      <div><label>Fuel Price</label><input id="fuelPrice" type="number" step="0.01" min="0" value="3.50"/></div>
+      <div><label>Base Fee</label><input id="baseFee" type="number" step="0.01" min="0" value="10"/></div>
+      <div><label>Per‑Mile Rate</label><input id="perMile" type="number" step="0.01" min="0" value="0.75"/></div>
+      <div><label>Driver Split (%)</label><input id="driverPct" type="number" step="1" min="0" max="100" value="40"/></div>
+      <div class="row">
+        <button id="estimateBtn">Estimate Cost</button>
+        <button id="saveBtn" class="secondary" type="button">Save Settings</button>
+      </div>
+    </div>
+
+    <div class="card" id="result" hidden>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <span class="pill" id="mileagePill">Distance: —</span>
+        <span class="pill" id="timePill">Drive Time: —</span>
+      </div>
+      <div class="breakdown" style="margin-top:12px">
+        <div class="line"><span>Miles</span><strong id="milesOut">—</strong></div>
+        <div class="line"><span>Fuel Cost</span><strong id="fuelOut">—</strong></div>
+        <div class="line"><span>Base Fee</span><strong id="baseOut">—</strong></div>
+        <div class="line"><span>Per‑Mile Charge</span><strong id="perMileOut">—</strong></div>
+        <div class="line"><span>Subtotal</span><strong id="subtotalOut">—</strong></div>
+        <div class="line"><span>Driver Pay</span><strong id="driverOut">—</strong></div>
+        <div class="line total"><span>Total to Customer</span><strong id="totalOut">—</strong></div>
+      </div>
+      <div id="debug" class="note" style="margin-top:10px"></div>
+    </div>
+
+    <p class="err" id="err" hidden></p>
+  </div>
+
+  <script>
+    // ======= Helpers =======
+    const els = {
+      orsKey: document.getElementById('orsKey'), units: document.getElementById('units'), includeReturn: document.getElementById('includeReturn'),
+      officeStreet: officeStreet, officeCity: officeCity, officeState: officeState, officeZip: officeZip,
+      pickupStreet: pickupStreet, pickupCity: pickupCity, pickupState: pickupState, pickupZip: pickupZip,
+      dropStreet: dropStreet, dropCity: dropCity, dropState: dropState, dropZip: dropZip,
+      mpg: mpg, fuelPrice: fuelPrice, baseFee: baseFee, perMile: perMile, driverPct: driverPct,
+      estimateBtn: estimateBtn, saveBtn: saveBtn,
+      result: result, err: err, debug: debug,
+      mileagePill: mileagePill, timePill: timePill,
+      milesOut: milesOut, fuelOut: fuelOut, baseOut: baseOut, perMileOut: perMileOut, subtotalOut: subtotalOut, driverOut: driverOut, totalOut: totalOut
+    };
+
+    function buildAddress(street, city, state, zip){
+      return [street, city, state, zip].filter(Boolean).join(', ');
     }
 
-    // Create desktop/mobile share buttons if missing and wire them
-    (function(){
-      const desk = document.querySelector('.desktop-actions');
-      if (desk && !document.getElementById('shareBtn')){
-        const b = document.createElement('button');
-        b.id='shareBtn'; b.className='secondary'; b.type='button'; b.textContent='Share Quote (PDF)';
-        b.addEventListener('click', async (e)=>{ e.preventDefault(); await shareQuote(); });
-        desk.appendChild(b);
+    const DEFAULT_OFFICE = { street: '2617 Evergreen Drive', city: 'Burlington', state: 'IA', zip: '52601' };
+
+    // ======= Persistence =======
+    function loadSettings(){
+      const s = JSON.parse(localStorage.getItem('ckk_trip_settings')||'{}');
+      els.orsKey.value = s.orsKey || '';
+      els.units.value = s.units || 'imperial';
+      els.includeReturn.value = s.includeReturn || 'no';
+      els.officeStreet.value = s.officeStreet || DEFAULT_OFFICE.street;
+      els.officeCity.value = s.officeCity || DEFAULT_OFFICE.city;
+      els.officeState.value = s.officeState || DEFAULT_OFFICE.state;
+      els.officeZip.value = s.officeZip || DEFAULT_OFFICE.zip;
+      if (s.mpg) els.mpg.value = s.mpg;
+      if (s.fuelPrice) els.fuelPrice.value = s.fuelPrice;
+      if (s.baseFee) els.baseFee.value = s.baseFee;
+      if (s.perMile) els.perMile.value = s.perMile;
+      if (s.driverPct) els.driverPct.value = s.driverPct;
+    }
+    function saveSettings(){
+      const s = {
+        orsKey: els.orsKey.value.trim(),
+        units: els.units.value,
+        includeReturn: els.includeReturn.value,
+        officeStreet: els.officeStreet.value.trim() || DEFAULT_OFFICE.street,
+        officeCity: els.officeCity.value.trim() || DEFAULT_OFFICE.city,
+        officeState: els.officeState.value.trim() || DEFAULT_OFFICE.state,
+        officeZip: els.officeZip.value.trim() || DEFAULT_OFFICE.zip,
+        mpg: Number(els.mpg.value), fuelPrice: Number(els.fuelPrice.value), baseFee: Number(els.baseFee.value), perMile: Number(els.perMile.value), driverPct: Number(els.driverPct.value)
+      };
+      localStorage.setItem('ckk_trip_settings', JSON.stringify(s));
+      toast('Settings saved.');
+    }
+    function toast(msg){ els.err.removeAttribute('hidden'); els.err.style.color = 'var(--ok)'; els.err.textContent = msg; setTimeout(()=>{ els.err.setAttribute('hidden',''); els.err.textContent=''; }, 1600); }
+
+    loadSettings();
+
+    // ======= ORS =======
+    const ORS_BASE = 'https://api.openrouteservice.org';
+    async function orsFetch(path, params, options={}){
+      const key = els.orsKey.value.trim();
+      if (!key) throw new Error('Missing OpenRouteService API key. Paste it at the top.');
+      let url = ORS_BASE + path;
+      const init = { headers: { 'Authorization': key, 'Content-Type': 'application/json' }, method: options.method || 'GET' };
+      if (init.method === 'GET'){
+        const u = new URL(url);
+        if (params){ Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v)); }
+        url = u.toString();
+      } else {
+        init.body = JSON.stringify(options.body || {});
       }
-      const actionInner = document.querySelector('.action-inner');
-      if (actionInner && !document.getElementById('shareBtnMobile')){
-        const bm = document.createElement('button');
-        bm.id='shareBtnMobile'; bm.className='secondary'; bm.type='button'; bm.textContent='Share';
-        bm.addEventListener('click', async (e)=>{ e.preventDefault(); await shareQuote(); });
-        actionInner.appendChild(bm);
+      const res = await fetch(url, init);
+      if (!res.ok){ const t = await res.text(); throw new Error('ORS error '+res.status+': '+t); }
+      return res.json();
+    }
+
+    function pickBestFeature(features){
+      if (!features || !features.length) return null;
+      features.sort((a,b)=>{
+        const ac = (a.properties.confidence||0) - (b.properties.confidence||0);
+        if (ac!==0) return ac>0?-1:1;
+        const as = (a.properties.match_type==='exact'?1:0) - (b.properties.match_type==='exact'?1:0);
+        if (as!==0) return as>0?-1:1;
+        const aus = (a.properties.country_a==='USA'?1:0) - (b.properties.country_a==='USA'?1:0);
+        return aus>0?-1:1;
+      });
+      return features[0];
+    }
+
+    async function geocodeOne(query){
+      const data = await orsFetch('/geocode/search', { text: query, size: 5, 'boundary.country': 'USA' });
+      const f = pickBestFeature(data.features);
+      if (!f) throw new Error('Address not found: '+query);
+      const [lon, lat] = f.geometry.coordinates;
+      const label = (f.properties && (f.properties.label || f.properties.name)) || query;
+      return {lon, lat, label, raw: f};
+    }
+
+    async function routeMulti(coords){
+      const body = { coordinates: coords, profile: 'driving-car', format: 'json' };
+      const data = await orsFetch('/v2/directions/driving-car', null, { method: 'POST', body });
+      const route = data && data.routes && data.routes[0];
+      if (!route || !route.summary) throw new Error('No route found between points.');
+      return { meters: route.summary.distance, seconds: route.summary.duration, segments: route.segments };
+    }
+
+    function metersToMiles(m){ return m / 1609.344; }
+    function metersToKm(m){ return m / 1000; }
+    function secondsToText(sec){ const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60); return h ? `${h}h ${m}m` : `${m}m`; }
+
+    async function estimate(){
+      els.err.setAttribute('hidden','');
+      els.result.setAttribute('hidden','');
+      els.debug.textContent = '';
+
+      const officeText = buildAddress(els.officeStreet.value, els.officeCity.value, els.officeState.value, els.officeZip.value);
+      const pickupText = buildAddress(els.pickupStreet.value, els.pickupCity.value, els.pickupState.value, els.pickupZip.value);
+      const dropText = buildAddress(els.dropStreet.value, els.dropCity.value, els.dropState.value, els.dropZip.value);
+
+      if (!els.pickupStreet.value || !els.pickupCity.value || !els.pickupState.value){
+        els.err.textContent = 'Pickup needs Street, City, and State at minimum.'; els.err.removeAttribute('hidden'); return;
       }
-    })();
+      if (!els.dropStreet.value || !els.dropCity.value || !els.dropState.value){
+        els.err.textContent = 'Drop-off needs Street, City, and State at minimum.'; els.err.removeAttribute('hidden'); return;
+      }
+
+      try{
+        const [office, pickup, drop] = await Promise.all([
+          geocodeOne(officeText), geocodeOne(pickupText), geocodeOne(dropText)
+        ]);
+
+        const coords = [ [office.lon, office.lat], [pickup.lon, pickup.lat], [drop.lon, drop.lat] ];
+        if (els.includeReturn.value === 'yes') coords.push([office.lon, office.lat]);
+        const r = await routeMulti(coords);
+
+        const units = els.units.value;
+        const miles = units === 'metric' ? metersToKm(r.meters) : metersToMiles(r.meters);
+        const milesFixed = (units === 'metric' ? metersToKm(r.meters) : metersToMiles(r.meters)).toFixed(2);
+
+        const mpg = Number(els.mpg.value);
+        const fuelPrice = Number(els.fuelPrice.value);
+        const baseFee = Number(els.baseFee.value);
+        const perMile = Number(els.perMile.value);
+        const driverPct = Number(els.driverPct.value) / 100;
+
+        const fuelCost = mpg > 0 ? (miles / mpg) * fuelPrice : 0;
+        const perMileCharge = miles * perMile;
+        const subtotal = baseFee + perMileCharge + fuelCost;
+        const driverPay = subtotal * driverPct;
+        const total = subtotal;
+
+        const segTxt = r.segments.map((s,i)=>{
+          const dist = units==='metric' ? (s.distance/1000).toFixed(1)+' km' : (metersToMiles(s.distance)).toFixed(1)+' mi';
+          return `leg${i+1}: ${dist}`;
+        }).join(' + ');
+
+        els.mileagePill.textContent = `Distance: ${milesFixed} ${units==='metric'?'km':'mi'} (${segTxt})`;
+        els.timePill.textContent = `Drive Time: ${secondsToText(r.seconds)}`;
+        els.milesOut.textContent = `${milesFixed} ${units==='metric'?'km':'mi'}`;
+        els.fuelOut.textContent = `$${fuelCost.toFixed(2)}`;
+        els.baseOut.textContent = `$${baseFee.toFixed(2)}`;
+        els.perMileOut.textContent = `$${perMileCharge.toFixed(2)}`;
+        els.subtotalOut.textContent = `$${subtotal.toFixed(2)}`;
+        els.driverOut.textContent = `$${driverPay.toFixed(2)} (${(driverPct*100).toFixed(0)}%)`;
+        els.totalOut.textContent = `$${total.toFixed(2)}`;
+
+        els.result.removeAttribute('hidden');
+        els.debug.innerHTML = `Geocoded:<br>Office → <code class="small">${office.label}</code> (<code class="small">${office.lon.toFixed(6)}, ${office.lat.toFixed(6)}</code>)<br>`+
+          `Pickup → <code class="small">${pickup.label}</code> (<code class="small">${pickup.lon.toFixed(6)}, ${pickup.lat.toFixed(6)}</code>)<br>`+
+          `Drop-off → <code class="small">${drop.label}</code> (<code class="small">${drop.lon.toFixed(6)}, ${drop.lat.toFixed(6)}</code>)`;
+      }catch(e){
+        els.err.textContent = e.message + ' — Check ORS key, request limits, or try a more specific address (include city/state/zip).';
+        els.err.removeAttribute('hidden');
+      }
+    }
+
+    els.estimateBtn.addEventListener('click', (e)=>{ e.preventDefault(); estimate(); });
+    els.saveBtn.addEventListener('click', (e)=>{ e.preventDefault(); saveSettings(); });
   </script>
 </body>
 </html>
